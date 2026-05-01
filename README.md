@@ -124,4 +124,10 @@ The test suite uses fake `git` and `codex` binaries for integration-style covera
 
 ## Project status
 
-`repoq` is early-stage software. Today it focuses on public GitHub repositories and terminal-based research workflows. The goal is to keep the tool small, predictable, and easy to understand.
+`repoq` is a tool I built for my own use and workflow. It is public so other people can use it too, but it is not meant to be a polished product with broad support guarantees.
+
+If a feature is missing, a bug affects your use case, or the tool does not work well in your environment, please fork it and adjust it for yourself. I do not plan to spend time making sure `repoq` works for every possible repository, setup, or workflow.
+
+## License
+
+`repoq` is released under the WTFPL. See [LICENSE](LICENSE).
