@@ -15,14 +15,31 @@ func NewRootCmd(runner askrunner.Runner) *cobra.Command {
 	var question string
 	var ref string
 	var instructions string
+	var showVersion bool
 
 	rootCmd := &cobra.Command{
 		Use:           "repoq <github_repository>",
 		Short:         "Ask questions about GitHub repositories with Codex",
-		Args:          cobra.ExactArgs(1),
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Args: func(cmd *cobra.Command, args []string) error {
+			if showVersion {
+				return cobra.NoArgs(cmd, args)
+			}
+
+			return cobra.ExactArgs(1)(cmd, args)
+		},
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if showVersion {
+				_, err := fmt.Fprint(cmd.OutOrStdout(), versionText(cmd.Context()))
+				return err
+			}
+
+			question = strings.TrimSpace(question)
+			if question == "" {
+				return fmt.Errorf("--question must not be empty")
+			}
+
 			answer, err := runner.Run(context.Background(), askrunner.Options{
 				Repository:   args[0],
 				Question:     question,
@@ -46,20 +63,7 @@ func NewRootCmd(runner askrunner.Runner) *cobra.Command {
 	rootCmd.Flags().StringVarP(&question, "question", "q", "", "Question to ask about the repository")
 	rootCmd.Flags().StringVar(&ref, "ref", "", "Branch or tag to inspect")
 	rootCmd.Flags().StringVar(&instructions, "instructions", "", "Extra instructions for the analysis agent")
-	_ = rootCmd.MarkFlagRequired("question")
-
-	rootCmd.PreRunE = func(cmd *cobra.Command, args []string) error {
-		if !cmd.Flags().Changed("question") {
-			return nil
-		}
-
-		question = strings.TrimSpace(question)
-		if question == "" {
-			return fmt.Errorf("--question must not be empty")
-		}
-
-		return nil
-	}
+	rootCmd.Flags().BoolVar(&showVersion, "version", false, "Show repoq version and latest available version")
 
 	return rootCmd
 }

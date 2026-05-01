@@ -94,6 +94,7 @@ The answer from Codex.
 | `--question` | `-q` | Question to ask about the repository. Required. |
 | `--ref` | | Branch or tag to inspect. |
 | `--instructions` | | Extra instructions passed to the analysis agent. |
+| `--version` | | Show the installed version, latest GitHub tag, and upgrade command when needed. |
 
 ## Cache
 

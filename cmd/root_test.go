@@ -15,7 +15,7 @@ func TestRootCommandRequiresQuestion(t *testing.T) {
 	cmd.SetArgs([]string{"openai/codex"})
 
 	err := cmd.Execute()
-	if err == nil || !strings.Contains(err.Error(), "required flag(s) \"question\" not set") {
+	if err == nil || !strings.Contains(err.Error(), "--question must not be empty") {
 		t.Fatalf("expected required question error, got %v", err)
 	}
 }
