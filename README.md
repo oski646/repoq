@@ -21,6 +21,14 @@ Ask questions about GitHub repositories from your terminal.
 
 ## Installation
 
+Install with the script:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/oski646/repoq/main/install.sh | sh
+```
+
+Or install with Go:
+
 ```sh
 go install github.com/oski646/repoq@latest
 ```
