@@ -25,6 +25,12 @@ Ask questions about GitHub repositories from your terminal.
 go install github.com/oski646/repoq@latest
 ```
 
+`go install` puts the binary in `$(go env GOPATH)/bin`. If `repoq` is not available after installation, add that directory to your shell `PATH`:
+
+```sh
+export PATH="$PATH:$(go env GOPATH)/bin"
+```
+
 For local development:
 
 ```sh
