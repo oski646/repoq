@@ -67,6 +67,25 @@ func TestRootCommandPassesInstructions(t *testing.T) {
 	}
 }
 
+func TestRootCommandPassesCommandContext(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	runner := &captureRunner{answer: "ok"}
+	cmd := NewRootCmd(runner)
+	cmd.SetContext(ctx)
+	cmd.SetArgs([]string{"openai/codex", "-q", "where is auth?"})
+
+	if err := cmd.Execute(); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if runner.ctx != ctx {
+		t.Fatal("expected runner to receive command context")
+	}
+}
+
 type stubRunner struct {
 	answer string
 	err    error
@@ -84,10 +103,12 @@ func (s stubRunner) Run(_ context.Context, opts askrunner.Options) (string, erro
 
 type captureRunner struct {
 	answer  string
+	ctx     context.Context
 	options askrunner.Options
 }
 
-func (r *captureRunner) Run(_ context.Context, opts askrunner.Options) (string, error) {
+func (r *captureRunner) Run(ctx context.Context, opts askrunner.Options) (string, error) {
+	r.ctx = ctx
 	r.options = opts
 	return r.answer, nil
 }

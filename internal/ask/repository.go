@@ -39,6 +39,9 @@ func NormalizeGitHubRepo(input string) (Repository, error) {
 	if parts[0] == "" || parts[1] == "" {
 		return Repository{}, errors.New("repository owner and name must not be empty")
 	}
+	if !safePathSegment(parts[0]) || !safePathSegment(parts[1]) {
+		return Repository{}, errors.New("repository owner and name must be safe path segments")
+	}
 
 	return Repository{
 		Owner: parts[0],
@@ -69,5 +72,21 @@ func cacheKey(ref string) string {
 		return "default"
 	}
 
-	return url.PathEscape(strings.TrimSpace(ref))
+	return safeCacheKey(strings.TrimSpace(ref))
+}
+
+func safeCacheKey(value string) string {
+	escaped := url.PathEscape(value)
+	if !safePathSegment(escaped) {
+		return "_" + escaped
+	}
+
+	return escaped
+}
+
+func safePathSegment(value string) bool {
+	return value != "" &&
+		value != "." &&
+		value != ".." &&
+		!strings.ContainsAny(value, `/\`)
 }

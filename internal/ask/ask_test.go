@@ -70,6 +70,16 @@ func TestNormalizeGitHubRepo(t *testing.T) {
 			input:   "openai/codex/extra",
 			wantErr: "repository must be owner/repo or a full GitHub URL",
 		},
+		{
+			name:    "dot owner segment",
+			input:   "./codex",
+			wantErr: "repository owner and name must be safe path segments",
+		},
+		{
+			name:    "dotdot repo segment",
+			input:   "openai/..",
+			wantErr: "repository owner and name must be safe path segments",
+		},
 	}
 
 	for _, tt := range tests {
@@ -104,6 +114,9 @@ func TestCachePath(t *testing.T) {
 	}
 	if got, want := CachePath("/tmp/repoq/repos", repo, "feature/test"), "/tmp/repoq/repos/openai/codex/feature%2Ftest"; got != want {
 		t.Fatalf("unexpected ref cache path: got %s want %s", got, want)
+	}
+	if got, want := CachePath("/tmp/repoq/repos", repo, ".."), "/tmp/repoq/repos/openai/codex/_.."; got != want {
+		t.Fatalf("unexpected unsafe ref cache path: got %s want %s", got, want)
 	}
 }
 

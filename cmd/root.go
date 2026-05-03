@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"strings"
@@ -40,7 +39,7 @@ func NewRootCmd(runner askrunner.Runner) *cobra.Command {
 				return fmt.Errorf("--question must not be empty")
 			}
 
-			answer, err := runner.Run(context.Background(), askrunner.Options{
+			answer, err := runner.Run(cmd.Context(), askrunner.Options{
 				Repository:   args[0],
 				Question:     question,
 				Ref:          ref,
