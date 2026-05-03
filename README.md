@@ -11,7 +11,7 @@ Ask questions about GitHub repositories from your terminal.
 - Runs Codex or Cursor with a repository-aware prompt.
 - Keeps cloned repositories in a local cache so repeated questions are faster.
 - Asks the analysis agent to cite concrete files and pinned GitHub blob URLs.
-- Runs the analysis agent in a read-only mode so it does not modify the cloned repository.
+- Runs Codex in a read-only sandbox and Cursor in ask mode using your Cursor sandbox or allowlist settings.
 
 ## Requirements
 

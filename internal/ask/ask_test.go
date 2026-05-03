@@ -171,19 +171,22 @@ func TestBuildCursorArgs(t *testing.T) {
 		Commit:        "abc123",
 	}, "Prefer a short answer.", DefaultCursorModel, "/tmp/cache")
 
-	got := strings.Join(args[:11], " ")
-	want := "agent --print --output-format text --mode ask --sandbox enabled --trust --workspace /tmp/cache"
+	got := strings.Join(args[:9], " ")
+	want := "agent --print --output-format text --mode ask --trust --workspace /tmp/cache"
 	if got != want {
 		t.Fatalf("unexpected cursor prefix args: got %q want %q", got, want)
 	}
-	if args[11] != "--model" || args[12] != "composer-2-fast" {
+	if args[9] != "--model" || args[10] != "composer-2-fast" {
 		t.Fatalf("unexpected model args: %+v", args)
 	}
-	if !strings.Contains(args[13], "where is auth?") {
-		t.Fatalf("question missing from prompt: %q", args[13])
+	if strings.Contains(strings.Join(args, " "), "--sandbox") {
+		t.Fatalf("cursor args should use cursor sandbox config, got %+v", args)
 	}
-	if !strings.Contains(args[13], "Prefer a short answer.") {
-		t.Fatalf("additional instructions missing: %q", args[13])
+	if !strings.Contains(args[11], "where is auth?") {
+		t.Fatalf("question missing from prompt: %q", args[11])
+	}
+	if !strings.Contains(args[11], "Prefer a short answer.") {
+		t.Fatalf("additional instructions missing: %q", args[11])
 	}
 }
 
