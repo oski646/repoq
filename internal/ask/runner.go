@@ -36,9 +36,12 @@ type CommandRunner struct {
 	Command           commandFactory
 	CreateTemp        func(string, string) (*os.File, error)
 	ReadFile          func(string) ([]byte, error)
+	WriteFile         func(string, []byte, os.FileMode) error
 	MkdirAll          func(string, os.FileMode) error
 	Stat              func(string) (os.FileInfo, error)
 	Remove            func(string) error
+	UserHomeDir       func() (string, error)
+	SettingsPath      string
 	DefaultErr        io.Writer
 }
 
@@ -50,15 +53,22 @@ func NewRunner() *CommandRunner {
 		Command:           exec.CommandContext,
 		CreateTemp:        os.CreateTemp,
 		ReadFile:          os.ReadFile,
+		WriteFile:         os.WriteFile,
 		MkdirAll:          os.MkdirAll,
 		Stat:              os.Stat,
 		Remove:            os.Remove,
+		UserHomeDir:       os.UserHomeDir,
 		DefaultErr:        os.Stderr,
 	}
 }
 
 func (r *CommandRunner) Run(ctx context.Context, opts Options) (string, error) {
-	if err := CheckDependencies(r.LookPath); err != nil {
+	settings, err := r.loadSettings()
+	if err != nil {
+		return "", err
+	}
+
+	if err := CheckDependencies(r.LookPath, settings.Provider); err != nil {
 		return "", err
 	}
 	if strings.TrimSpace(opts.Question) == "" {
@@ -95,39 +105,21 @@ func (r *CommandRunner) Run(ctx context.Context, opts Options) (string, error) {
 
 	fmt.Fprintf(stderr, "repository ready: %s\n", describeRepositoryState(repo, promptContext))
 
-	outputFile, err := r.CreateTemp("", "repoq-codex-*.txt")
+	answer, err := r.runAnalysis(ctx, settings, cacheDir, opts.Question, promptContext, opts.Instructions, stderr)
 	if err != nil {
-		return "", fmt.Errorf("create codex output file: %w", err)
-	}
-	outputPath := outputFile.Name()
-	if err := outputFile.Close(); err != nil {
-		return "", fmt.Errorf("close codex output file: %w", err)
-	}
-	defer func() {
-		_ = r.Remove(outputPath)
-	}()
-
-	if err := r.runCodex(ctx, cacheDir, opts.Question, promptContext, outputPath, opts.Instructions, stderr); err != nil {
 		return "", err
 	}
 
-	fmt.Fprintln(stderr, "codex analysis finished")
-
-	answer, err := r.ReadFile(outputPath)
-	if err != nil {
-		return "", fmt.Errorf("read codex answer: %w", err)
-	}
-
-	trimmed := strings.TrimSpace(string(answer))
+	trimmed := strings.TrimSpace(answer)
 	if trimmed == "" {
-		return "", errors.New("codex returned an empty answer")
+		return "", fmt.Errorf("%s returned an empty answer", settings.Provider)
 	}
 
 	return trimmed, nil
 }
 
-func CheckDependencies(lookPath func(string) (string, error)) error {
-	for _, binary := range []string{"git", "codex"} {
+func CheckDependencies(lookPath func(string) (string, error), provider Provider) error {
+	for _, binary := range []string{"git", provider.BinaryName()} {
 		if _, err := lookPath(binary); err != nil {
 			return fmt.Errorf("%s is not installed or not available in PATH", binary)
 		}

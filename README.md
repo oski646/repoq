@@ -2,22 +2,22 @@
 
 Ask questions about GitHub repositories from your terminal.
 
-`repoq` clones a GitHub repository into a local cache, checks out the requested branch or tag, then runs Codex against that checkout in read-only mode. It is meant for quick repository research when you want an answer grounded in the actual files, symbols, and code paths.
+`repoq` clones a GitHub repository into a local cache, checks out the requested branch or tag, then runs a local AI agent CLI against that checkout in read-only mode. It is meant for quick repository research when you want an answer grounded in the actual files, symbols, and code paths.
 
 ## What it does
 
 - Accepts GitHub repositories as `owner/repo` or full GitHub URLs.
 - Supports an optional branch or tag with `--ref`.
-- Runs Codex with a repository-aware prompt.
+- Runs Codex or Cursor with a repository-aware prompt.
 - Keeps cloned repositories in a local cache so repeated questions are faster.
-- Asks Codex to cite concrete files and pinned GitHub blob URLs.
-- Runs Codex in a read-only sandbox so analysis does not modify the cloned repository.
+- Asks the analysis agent to cite concrete files and pinned GitHub blob URLs.
+- Runs the analysis agent in a read-only mode so it does not modify the cloned repository.
 
 ## Requirements
 
 - Go 1.26 or newer.
 - `git` available in `PATH`.
-- `codex` available in `PATH` and already authenticated.
+- One authenticated AI agent CLI available in `PATH`: `codex` or `cursor`.
 
 ## Installation
 
@@ -83,8 +83,36 @@ repoq openai/codex \
 
 ```text
 <answer>
-The answer from Codex.
+The answer from the analysis agent.
 </answer>
+```
+
+## Settings
+
+On first run, `repoq` creates `~/.repoq/settings.json`. If both `codex` and `cursor` are available, `repoq` chooses Codex.
+
+To choose a provider explicitly, edit the settings file:
+
+```json
+{
+  "provider": "cursor",
+  "model": "composer-2-fast"
+}
+```
+
+Supported providers:
+
+| Provider | Default model |
+| --- | --- |
+| `codex` | `gpt-5.4-mini` |
+| `cursor` | `composer-2-fast` |
+
+## AI agent setup
+
+To make coding agents use `repoq` automatically, add this to your global or project `AGENTS.md`:
+
+```text
+Always use "repoq" CLI tool if user asks you about specific things in a specific repository on github.
 ```
 
 ## Options
@@ -120,7 +148,7 @@ Run tests with:
 go test ./...
 ```
 
-The test suite uses fake `git` and `codex` binaries for integration-style coverage, so it does not need network access or a real Codex session.
+The test suite uses fake `git`, `codex`, and `cursor` binaries for integration-style coverage, so it does not need network access or a real AI session.
 
 ## Project status
 

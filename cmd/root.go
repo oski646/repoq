@@ -19,7 +19,7 @@ func NewRootCmd(runner askrunner.Runner) *cobra.Command {
 
 	rootCmd := &cobra.Command{
 		Use:           "repoq <github_repository>",
-		Short:         "Ask questions about GitHub repositories with Codex",
+		Short:         "Ask questions about GitHub repositories with a local AI agent CLI",
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		Args: func(cmd *cobra.Command, args []string) error {

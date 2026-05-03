@@ -16,7 +16,7 @@ func TestCheckDependencies(t *testing.T) {
 
 	err := CheckDependencies(func(name string) (string, error) {
 		return "/bin/" + name, nil
-	})
+	}, ProviderCodex)
 	if err != nil {
 		t.Fatalf("expected dependencies to pass, got %v", err)
 	}
@@ -30,7 +30,7 @@ func TestCheckDependenciesMissingBinary(t *testing.T) {
 			return "", os.ErrNotExist
 		}
 		return "/bin/" + name, nil
-	})
+	}, ProviderCodex)
 	if err == nil || !strings.Contains(err.Error(), "codex is not installed") {
 		t.Fatalf("expected codex missing error, got %v", err)
 	}
@@ -126,7 +126,7 @@ func TestBuildCodexArgs(t *testing.T) {
 		RepositoryURL: "https://github.com/openai/codex",
 		RequestedRef:  "main",
 		Commit:        "abc123",
-	}, "/tmp/output.txt", "Prefer a short answer.")
+	}, "/tmp/output.txt", "Prefer a short answer.", DefaultCodexModel)
 	got := strings.Join(args[:8], " ")
 	want := "exec -m gpt-5.4-mini --sandbox read-only --ephemeral --color never"
 	if got != want {
@@ -146,6 +146,146 @@ func TestBuildCodexArgs(t *testing.T) {
 	}
 	if !strings.Contains(args[10], "Prefer a short answer.") {
 		t.Fatalf("additional instructions missing: %q", args[10])
+	}
+}
+
+func TestBuildCursorArgs(t *testing.T) {
+	t.Parallel()
+
+	args := BuildCursorArgs("where is auth?", PromptContext{
+		RepositoryURL: "https://github.com/openai/codex",
+		RequestedRef:  "main",
+		Commit:        "abc123",
+	}, "Prefer a short answer.", DefaultCursorModel, "/tmp/cache")
+
+	got := strings.Join(args[:11], " ")
+	want := "agent --print --output-format text --mode ask --sandbox enabled --trust --workspace /tmp/cache"
+	if got != want {
+		t.Fatalf("unexpected cursor prefix args: got %q want %q", got, want)
+	}
+	if args[11] != "--model" || args[12] != "composer-2-fast" {
+		t.Fatalf("unexpected model args: %+v", args)
+	}
+	if !strings.Contains(args[13], "where is auth?") {
+		t.Fatalf("question missing from prompt: %q", args[13])
+	}
+	if !strings.Contains(args[13], "Prefer a short answer.") {
+		t.Fatalf("additional instructions missing: %q", args[13])
+	}
+}
+
+func TestSettingsDefaults(t *testing.T) {
+	t.Parallel()
+
+	settings, err := (Settings{Provider: ProviderCursor}).WithDefaults()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if settings.Provider != ProviderCursor || settings.Model != DefaultCursorModel {
+		t.Fatalf("unexpected cursor defaults: %+v", settings)
+	}
+
+	settings, err = (Settings{}).WithDefaults()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if settings.Provider != ProviderCodex || settings.Model != DefaultCodexModel {
+		t.Fatalf("unexpected codex defaults: %+v", settings)
+	}
+}
+
+func TestSettingsRejectsUnsupportedProvider(t *testing.T) {
+	t.Parallel()
+
+	_, err := (Settings{Provider: Provider("other")}).WithDefaults()
+	if err == nil || !strings.Contains(err.Error(), "unsupported provider") {
+		t.Fatalf("expected unsupported provider error, got %v", err)
+	}
+}
+
+func TestLoadSettingsCreatesDefaultFile(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	runner := NewRunner()
+	runner.UserHomeDir = func() (string, error) { return tempDir, nil }
+	runner.LookPath = func(name string) (string, error) {
+		if name == "codex" {
+			return "/bin/codex", nil
+		}
+		return "", os.ErrNotExist
+	}
+
+	settings, err := runner.loadSettings()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if settings != DefaultSettings() {
+		t.Fatalf("unexpected settings: got %+v want %+v", settings, DefaultSettings())
+	}
+
+	settingsPath := filepath.Join(tempDir, DefaultSettingsRelativePath)
+	data, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read created settings: %v", err)
+	}
+	want := "{\n  \"provider\": \"codex\",\n  \"model\": \"gpt-5.4-mini\"\n}\n"
+	if string(data) != want {
+		t.Fatalf("unexpected settings file:\n%s", string(data))
+	}
+}
+
+func TestLoadSettingsCreatesCursorDefaultWhenOnlyCursorExists(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	runner := NewRunner()
+	runner.UserHomeDir = func() (string, error) { return tempDir, nil }
+	runner.LookPath = func(name string) (string, error) {
+		if name == "cursor" {
+			return "/bin/cursor", nil
+		}
+		return "", os.ErrNotExist
+	}
+
+	settings, err := runner.loadSettings()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if settings != CursorDefaultSettings() {
+		t.Fatalf("unexpected settings: got %+v want %+v", settings, CursorDefaultSettings())
+	}
+
+	settingsPath := filepath.Join(tempDir, DefaultSettingsRelativePath)
+	data, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("read created settings: %v", err)
+	}
+	want := "{\n  \"provider\": \"cursor\",\n  \"model\": \"composer-2-fast\"\n}\n"
+	if string(data) != want {
+		t.Fatalf("unexpected settings file:\n%s", string(data))
+	}
+}
+
+func TestLoadSettingsPrefersCodexWhenBothCLIsExist(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	runner := NewRunner()
+	runner.UserHomeDir = func() (string, error) { return tempDir, nil }
+	runner.LookPath = func(name string) (string, error) {
+		if name == "codex" || name == "cursor" {
+			return "/bin/" + name, nil
+		}
+		return "", os.ErrNotExist
+	}
+
+	settings, err := runner.loadSettings()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if settings != DefaultSettings() {
+		t.Fatalf("unexpected settings: got %+v want %+v", settings, DefaultSettings())
 	}
 }
 
@@ -203,9 +343,11 @@ printf '%s\n' "${FAKE_CODEX_ANSWER}" > "$out"
 		Command:           exec.CommandContext,
 		CreateTemp:        os.CreateTemp,
 		ReadFile:          os.ReadFile,
+		WriteFile:         os.WriteFile,
 		MkdirAll:          os.MkdirAll,
 		Stat:              os.Stat,
 		Remove:            os.Remove,
+		UserHomeDir:       func() (string, error) { return tempDir, nil },
 	}
 
 	for i := 0; i < 2; i++ {
@@ -227,6 +369,79 @@ printf '%s\n' "${FAKE_CODEX_ANSWER}" > "$out"
 	}
 	if lines := readLogLines(t, filepath.Join(logDir, "codex.log")); len(lines) != 2 {
 		t.Fatalf("expected 2 codex invocations, got %d", len(lines))
+	}
+}
+
+func TestRunnerUsesCursorProviderFromSettings(t *testing.T) {
+	tempDir := t.TempDir()
+	binDir := filepath.Join(tempDir, "bin")
+	logDir := filepath.Join(tempDir, "logs")
+	cacheRoot := filepath.Join(tempDir, "cache")
+	settingsPath := filepath.Join(tempDir, ".repoq", "settings.json")
+
+	for _, dir := range []string{binDir, logDir, filepath.Dir(settingsPath)} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+	if err := os.WriteFile(settingsPath, []byte(`{"provider":"cursor"}`), 0o644); err != nil {
+		t.Fatalf("write settings: %v", err)
+	}
+
+	writeExecutable(t, filepath.Join(binDir, "git"), `#!/bin/sh
+if [ "$1" = "rev-parse" ] && [ "$2" = "HEAD" ]; then
+	printf '%s\n' "${FAKE_GIT_COMMIT}"
+	exit 0
+fi
+dest=""
+for arg in "$@"; do
+	dest="$arg"
+done
+mkdir -p "$dest/.git"
+`)
+
+	writeExecutable(t, filepath.Join(binDir, "cursor"), `#!/bin/sh
+printf '%s\n' "$*" >> "$FAKE_LOG_DIR/cursor.log"
+printf '%s\n' "${FAKE_CURSOR_ANSWER}"
+`)
+
+	t.Setenv("PATH", binDir+string(os.PathListSeparator)+os.Getenv("PATH"))
+	t.Setenv("FAKE_LOG_DIR", logDir)
+	t.Setenv("FAKE_CURSOR_ANSWER", "cursor answer")
+	t.Setenv("FAKE_GIT_COMMIT", "abc123")
+
+	runner := &CommandRunner{
+		CacheRoot:         cacheRoot,
+		HeartbeatInterval: 5 * time.Second,
+		LookPath:          execLookPathForTest,
+		Command:           exec.CommandContext,
+		CreateTemp:        os.CreateTemp,
+		ReadFile:          os.ReadFile,
+		WriteFile:         os.WriteFile,
+		MkdirAll:          os.MkdirAll,
+		Stat:              os.Stat,
+		Remove:            os.Remove,
+		UserHomeDir:       func() (string, error) { return tempDir, nil },
+	}
+
+	answer, err := runner.Run(context.Background(), Options{
+		Repository: "openai/codex",
+		Question:   "Where is auth?",
+		Stderr:     ioDiscard{},
+	})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if answer != "cursor answer" {
+		t.Fatalf("unexpected answer: %q", answer)
+	}
+
+	logData, err := os.ReadFile(filepath.Join(logDir, "cursor.log"))
+	if err != nil {
+		t.Fatalf("read cursor log: %v", err)
+	}
+	if !strings.Contains(string(logData), "--model composer-2-fast") {
+		t.Fatalf("expected default cursor model, got %q", string(logData))
 	}
 }
 
@@ -281,9 +496,11 @@ printf '%s\n' "${FAKE_CODEX_ANSWER}" > "$out"
 		Command:           exec.CommandContext,
 		CreateTemp:        os.CreateTemp,
 		ReadFile:          os.ReadFile,
+		WriteFile:         os.WriteFile,
 		MkdirAll:          os.MkdirAll,
 		Stat:              os.Stat,
 		Remove:            os.Remove,
+		UserHomeDir:       func() (string, error) { return tempDir, nil },
 	}
 
 	answer, err := runner.Run(context.Background(), Options{
@@ -302,7 +519,7 @@ printf '%s\n' "${FAKE_CODEX_ANSWER}" > "$out"
 	for _, expected := range []string{
 		"preparing repository https://github.com/openai/codex.git",
 		"repository ready: openai/codex at default branch (abc123)",
-		"starting codex analysis",
+		"starting codex (gpt-5.4-mini) analysis",
 		"still analyzing...",
 		"codex analysis finished",
 	} {
@@ -324,6 +541,7 @@ func TestRunnerMissingGit(t *testing.T) {
 
 	runner := NewRunner()
 	runner.CacheRoot = filepath.Join(tempDir, "cache")
+	runner.UserHomeDir = func() (string, error) { return tempDir, nil }
 
 	_, err := runner.Run(context.Background(), Options{
 		Repository: "openai/codex",
@@ -347,6 +565,7 @@ func TestRunnerMissingCodex(t *testing.T) {
 
 	runner := NewRunner()
 	runner.CacheRoot = filepath.Join(tempDir, "cache")
+	runner.UserHomeDir = func() (string, error) { return tempDir, nil }
 
 	_, err := runner.Run(context.Background(), Options{
 		Repository: "openai/codex",
