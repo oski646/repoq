@@ -58,12 +58,16 @@ func BuildCloneArgs(repo Repository, ref, destination string) []string {
 	if ref != "" {
 		args = append(args, "--branch", ref)
 	}
-	args = append(args, repo.CloneURL(), destination)
+	args = append(args, repo.SSHCloneURL(), destination)
 
 	return args
 }
 
-func (r Repository) CloneURL() string {
+func (r Repository) SSHCloneURL() string {
+	return fmt.Sprintf("git@github.com:%s/%s.git", r.Owner, r.Name)
+}
+
+func (r Repository) WebURL() string {
 	return fmt.Sprintf("https://github.com/%s/%s.git", r.Owner, r.Name)
 }
 

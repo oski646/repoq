@@ -90,7 +90,7 @@ func (r *CommandRunner) Run(ctx context.Context, opts Options) (string, error) {
 		if err := r.MkdirAll(filepath.Dir(cacheDir), 0o755); err != nil {
 			return "", fmt.Errorf("create cache parent directory: %w", err)
 		}
-		fmt.Fprintf(stderr, "preparing repository %s\n", repo.CloneURL())
+		fmt.Fprintf(stderr, "preparing repository %s\n", repo.SSHCloneURL())
 		if err := r.runClone(ctx, repo, opts.Ref, cacheDir); err != nil {
 			return "", err
 		}

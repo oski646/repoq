@@ -35,7 +35,7 @@ func (r *CommandRunner) resolvePromptContext(
 	}
 
 	return PromptContext{
-		RepositoryURL: strings.TrimSuffix(repo.CloneURL(), ".git"),
+		RepositoryURL: strings.TrimSuffix(repo.WebURL(), ".git"),
 		RequestedRef:  strings.TrimSpace(requestedRef),
 		Commit:        strings.TrimSpace(commit),
 	}, nil

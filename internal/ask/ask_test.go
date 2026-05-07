@@ -126,7 +126,7 @@ func TestBuildCloneArgs(t *testing.T) {
 	repo := Repository{Owner: "openai", Name: "codex"}
 	args := BuildCloneArgs(repo, "main", "/tmp/cache")
 	got := strings.Join(args, " ")
-	want := "clone --depth 1 --branch main https://github.com/openai/codex.git /tmp/cache"
+	want := "clone --depth 1 --branch main git@github.com:openai/codex.git /tmp/cache"
 	if got != want {
 		t.Fatalf("unexpected clone args: got %q want %q", got, want)
 	}
@@ -533,7 +533,7 @@ printf '%s\n' "${FAKE_CODEX_ANSWER}" > "$out"
 
 	progress := stderr.String()
 	for _, expected := range []string{
-		"preparing repository https://github.com/openai/codex.git",
+		"preparing repository git@github.com:openai/codex.git",
 		"repository ready: openai/codex at default branch (abc123)",
 		"starting codex (gpt-5.4-mini) analysis",
 		"still analyzing...",
