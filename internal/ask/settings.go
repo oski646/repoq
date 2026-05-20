@@ -13,7 +13,7 @@ import (
 const (
 	DefaultSettingsRelativePath = ".repoq/settings.json"
 	DefaultCodexModel           = "gpt-5.4-mini"
-	DefaultCursorModel          = "composer-2-fast"
+	DefaultCursorModel          = "composer-2.5-fast"
 )
 
 type Provider string

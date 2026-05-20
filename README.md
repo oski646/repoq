@@ -96,7 +96,7 @@ To choose a provider explicitly, edit the settings file:
 ```json
 {
   "provider": "cursor",
-  "model": "composer-2-fast"
+  "model": "composer-2.5-fast"
 }
 ```
 
@@ -105,7 +105,7 @@ Supported providers:
 | Provider | Default model |
 | --- | --- |
 | `codex` | `gpt-5.4-mini` |
-| `cursor` | `composer-2-fast` |
+| `cursor` | `composer-2.5-fast` |
 
 ## AI agent setup
 

@@ -176,7 +176,7 @@ func TestBuildCursorArgs(t *testing.T) {
 	if got != want {
 		t.Fatalf("unexpected cursor prefix args: got %q want %q", got, want)
 	}
-	if args[9] != "--model" || args[10] != "composer-2-fast" {
+	if args[9] != "--model" || args[10] != "composer-2.5-fast" {
 		t.Fatalf("unexpected model args: %+v", args)
 	}
 	if strings.Contains(strings.Join(args, " "), "--sandbox") {
@@ -277,7 +277,7 @@ func TestLoadSettingsCreatesCursorDefaultWhenOnlyCursorExists(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read created settings: %v", err)
 	}
-	want := "{\n  \"provider\": \"cursor\",\n  \"model\": \"composer-2-fast\"\n}\n"
+	want := "{\n  \"provider\": \"cursor\",\n  \"model\": \"composer-2.5-fast\"\n}\n"
 	if string(data) != want {
 		t.Fatalf("unexpected settings file:\n%s", string(data))
 	}
@@ -456,7 +456,7 @@ printf '%s\n' "${FAKE_CURSOR_ANSWER}"
 	if err != nil {
 		t.Fatalf("read cursor log: %v", err)
 	}
-	if !strings.Contains(string(logData), "--model composer-2-fast") {
+	if !strings.Contains(string(logData), "--model composer-2.5-fast") {
 		t.Fatalf("expected default cursor model, got %q", string(logData))
 	}
 }
